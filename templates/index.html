@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raspberry Pi Camera</title>
+    <link rel="stylesheet" href="static/style.css" type = 'text/css'>
+</head>
+<body>
+    <h1> Image to Line Draw Converter</h1>
+    <div class="camera-container">
+        <img id="camera-feed" src="/video_feed" alt="Camera Feed">
+    </div>
+    
+    <div class = 'images'>
+        <!-- <div> -->
+        <img id="captured-image" src="#" alt="Captured Image">
+            <!-- <h2 class = 'display-text'>Captured Image</h2> -->
+            <!-- <h2 class = 'display-text'>Converted Image</h2> -->
+        <!-- </div> -->
+        <!-- <div> -->
+        <img id="converted-image" src="#" alt="Converted Image">
+            <!-- <h2 class = 'display-text'>Captured Image</h2> -->
+            <!-- <h2 class = 'display-text'>Converted Image</h2> -->
+        <!-- </div> -->
+    </div>
+
+    
+
+    <div class ='button-container'>
+        <button id ="capture-btn">Capture Image</button>
+        <button id ="convert-btn" style="display: none;">Convert</button>
+        <button id ="reset">Reset</button>
+        <button id ="print">print</button>
+    </div>
+
+    <script>
+        const video = document.getElementById('camera-feed');
+        const captureButton = document.getElementById('capture-btn');
+        const convertButton = document.getElementById('convert-btn');
+        const capturedImage = document.getElementById('captured-image');
+        const convertedImage = document.getElementById('converted-image');
+        const resetButton = document.getElementById('reset');
+        const printButton = document.getElementById('print');
+        const imager = document.getElementsByClassName('images')
+        const displaytext = document.getElementsByClassName('display-text')
+        let capturedImageData = null;
+
+        captureButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/capture_image');
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                capturedImage.src = url;
+                capturedImage.style.display = 'block';
+                
+                // Enable the convert button after capturing the image
+                convertButton.style.display = 'block';
+
+                // Convert the image to base64 for sending to the server
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    capturedImageData = reader.result; // Store the base64 string
+                };
+                reader.readAsDataURL(blob);
+                captureButton.style.display = 'none';
+                video.style.display = 'none'
+                resetButton.style.display = 'flex'
+                // imager.style.justifyContent = 'center'
+                document.querySelector('.images').style.cssText = 'justify-content: center;'
+                capturedImage.style.display = 'flex'
+                
+            } catch (error) {
+                console.error('Error capturing image:', error);
+            }
+        });
+
+        convertButton.addEventListener('click', async () => {
+            if (!capturedImageData) {
+                alert('Please capture an image first.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: capturedImageData }),
+                });
+
+                const result = await response.json();
+                
+                // Show the converted image
+                convertedImage.src = result.linedraw;
+                convertedImage.style.display = 'block';
+                convertButton.style.display = 'none'
+                printButton.style.display = 'flex'
+                // imager.style.justifyContent = 'space-evenly'
+
+                // Array.from(displaytext).forEach((element) => {
+                // element.style.display = 'flex';
+                // });
+            } catch (error) {
+                console.error('Error converting image:', error);
+            }
+        });
+        resetButton.addEventListener('click', () => {
+        // Reset the captured image
+        capturedImage.src = "#";
+        capturedImage.style.display = "none";
+
+        // Reset the converted image
+        convertedImage.src = "#";
+        convertedImage.style.display = "none";
+
+        // Reset the video feed visibility
+        video.style.display = "block";
+
+        // Reset button states
+        convertButton.style.display = "none";
+        captureButton.style.display = "block";
+        resetButton.style.display = 'none'
+        printButton.style.display = 'none'
+        // Array.from(displaytext).forEach((element) => {
+        // element.style.display = 'none';
+        // });
+
+        // Clear any captured image data
+        capturedImageData = null;
+    });
+    </script>
+</body>
+</html>
